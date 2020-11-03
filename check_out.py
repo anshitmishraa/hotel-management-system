@@ -9,7 +9,7 @@ root = Tk()
 root.geometry(str(HEIGHT) + "x" + str(WIDTH))
 
 heading_label = Label(root, text="Check-Out Process",
-                      font=('Arial 30 bold'))
+                      font=("Old English Text MT", 50))
 heading_label.pack(pady=(50, 50))
 
 root.title("CHECK-OUT PROCESS | HOTEL MAURYAN EMPIRE")
@@ -40,6 +40,11 @@ for staff in cur:
     if staff[4]:
         rNumberList.append(str(staff[4]))
 
+if len(rNumberList) == 1:
+    messagebox.showwarning(
+        "Warning", "Sorry, there is no room in our system that is occupied. We are currently working on it.")
+    root.destroy()
+
 # Combobox creation
 monthchoosen = ttk.Combobox(
     root, width=30, height=33, textvariable=rNumberList, font=fontExample, values=rNumberList)
@@ -58,17 +63,43 @@ def incomplete_data():
 
 
 def click_proceed():
+    global review_box, customer_review, feedback
+    review_box.destroy()
+    customerReview = customer_review.get()
+
+    conn.execute(
+        'INSERT INTO review_form (feedback, review) VALUES(%s,%s)', (feedback.get(), customerReview))
+
+    orginalDb.commit()
+
+    click_proceeds()
+
+
+def click_proceeds():
     rNumber = monthchoosen.get()
-    sql_Delete_query = "DELETE FROM  customer_details where roomNum = %s"
-    conn.execute(sql_Delete_query, rNumber)
-    cur.execute("""UPDATE `room_details` SET `room_status` = %s WHERE `room_number`= %s""",
-                (0, rNumber))
+    sql_Delete_query = ('DELETE FROM  customer_details where roomNum = %s')
+    conn.execute(sql_Delete_query, (rNumber,))
+
+    orginalDb.commit()
+
+    cur.execute(
+        'UPDATE room_details SET room_status = %s WHERE room_number= %s', (0, rNumber,))
+    mydb.commit()
+
+    orginalDb.close()
+
+    mydb.close()
 
     messagebox.showwarning("info", "Thank you for visiting us!")
+    root.destroy()
 
 
 def review():
+    global review_box, customer_review, feedback
+    # variable name
     review_box = tk.Tk()
+    customer_review = tk.StringVar(review_box)
+
     review_box.title("FEEDBACK FORM | HOTEL MAURYAN EMPIRE")
     review_box.geometry(str(HEIGHT) + "x" + str(WIDTH))
 
@@ -93,9 +124,10 @@ def review():
     remark_label = Label(review_box, text="Remark", font=(
         "bold", 25))
     remark_label.pack(pady=(50, 50))
-    entry_box = Entry(review_box, font=("Arial", 25),
-                      width=50)
+    entry_box = Entry(review_box, font=("Arial", 25), textvar=customer_review,
+                      width=50, fg='blue', bg="#ccefff")
     entry_box.pack(padx=(50, 50))
+
     B1 = Button(review_box, text="Submit", width=10, font=(
         'ARIAL', 20), command=click_proceed)
     B1.pack(pady=50)
@@ -105,7 +137,6 @@ def review():
 proceed_button = Button(root, text="PROCEED", width=10, bg="blue", fg='white', font=('ARIAL', 20),
                         relief=RAISED, command=incomplete_data)
 proceed_button.place(relx=0.5, rely=0.45, anchor=S)
-mydb.commit()
-orginalDb.commit()
+
 
 root.mainloop()
