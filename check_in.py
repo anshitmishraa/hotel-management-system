@@ -6,6 +6,8 @@ from tkinter import ttk
 from tkinter import messagebox
 from constant_variable import WIDTH, HEIGHT, AC_ROOM_CHARGES, NON_AC_ROOM_CHARGES
 import random
+from datetime import datetime
+from datetime import timedelta
 
 root = tk.Tk()
 root.geometry(str(HEIGHT) + "x" + str(WIDTH))
@@ -14,6 +16,7 @@ root.title("CHECK-IN PROCESS | HOTEL MAURYAN EMPIRE")
 heading_label = Label(root, text="Check-In Process",
                       font=('Arial 30 bold'))
 heading_label.pack(pady=(50, 50))
+
 
 # database connection
 orginalDb = mysql.connector.connect(
@@ -75,22 +78,22 @@ def valid():
 
 
 def room_booking():
+    global roomNum
     room_booking = tk.Tk()
     room_booking.title("ROOM BOOOKING | HOTEL MAURYAN EMPIRE")
     room_booking.geometry(str(HEIGHT) + "x" + str(WIDTH))
 
     heading_room_label = Label(room_booking, text="Room Booking",
-                               font=("Arial 30 bold", 30))
+                               font=("Old English Text MT", 50))
     heading_room_label.pack(pady=(25, 25))
 
     room_number_label = Label(room_booking, text="Room Number", font=(
-        'Arial', 25))
+        'Arial', 25, 'bold'))
     room_number_label.pack(pady=(25, 25))
 
     cur.execute("SELECT * FROM room_details")
 
     rNumberList = []
-    fontExample = ("Arial", 20, "bold")
 
     if roomTypes.get() == 'AC Room':
         roomType = 1
@@ -106,34 +109,35 @@ def room_booking():
             room_booking, text="%s" % (room), font=('Arial', 20))
         room_number_label.pack(padx=(15, 15))
 
-    if len(rNumberList) == 0 and roomType == 1:
+    if (len(rNumberList) == 0 and roomType == 1):
         messagebox.showwarning(
             "Warning", "Sorry all rooms are booked. Please try for Non AC Room")
         room_booking.destroy()
-    if len(rNumberList) == 0 and roomType == 2:
+    if (len(rNumberList) == 0 and roomType == 2):
         messagebox.showwarning(
             "Warning", "Sorry all rooms are booked. Please try for AC Room")
         room_booking.destroy()
+    if (len(rNumberList) == 0 and roomType == 2)and (len(rNumberList) == 0 and roomType == 1):
+        messagebox.showwarning(
+            "Warning", "Sorry all rooms are booked. Please come back later!")
+        room_booking.destroy()
 
     n = random.randint(0, len(rNumberList)-1)
-    randomRoom = rNumberList[n]
+    randomRoom = (rNumberList[n])
     r_number_label = Label(
         room_booking, text="Room Alloted: %s" % (randomRoom), font=('Arial', 20))
     r_number_label.pack(pady=(15, 15))
+    roomNum = randomRoom
 
     # Room status button
     room_detail = Button(room_booking, text="Show Room Status", font=('ARIAL', 20), bg='blue',
                          fg='White', width=25, command=room_details, height=2)
     room_detail.pack(pady=(15, 15))
-    cur.execute('UPDATE customer_details SET roomNum = %s WHERE phoneNum= %s',
-                ((randomRoom), phoneNumber.get()))
-    allcur.execute('UPDATE orginial_customer_details SET roomNum = %s WHERE phoneNum= %s',
-                   ((randomRoom), phoneNumber.get()))
+
     conn.execute('UPDATE room_details SET room_status = %s WHERE room_number= %s',
-                 (1, (randomRoom)))
-    orginalDb.commit()
-    copyDb.commit()
+                 (1, randomRoom,))
     db.commit()
+
     # Submit Button
     submit_buttons = Button(room_booking,
                             text="Click for Payment", width=15, bg="blue",
@@ -154,7 +158,7 @@ def return_payment():
 
     # Payment
     heading_room_label = Label(payment_page, text="Payment",
-                               font=("bold", 40))
+                               font=("Old English Text MT", 50))
     heading_room_label.pack(pady=(50, 50))
 
     if roomTypes.get() == 'AC Room':
@@ -164,20 +168,40 @@ def return_payment():
 
     total_amount = (numberOfDays.get())*room_type
     payment_label = Label(
-        payment_page, text="Payment Details", font=('Arial', 20))
+        payment_page, text="Payment Details", font=('Arial', 25, 'bold'))
     payment_label.pack(pady=(25, 25))
 
-    number_of_people_label = Label(
-        payment_page, text="Number of People: %s" % (numberOfPeople.get()),  font=('Arial', 20))
-    number_of_people_label.pack(pady=(25, 25))
+    cols = ('Number of People', 'Number Of Days',
+            'Amount you have to pay(in \u20B9)', 'Check In Time', 'Check Out Time')
 
-    number_of_days_label = Label(
-        payment_page, text="Number Of Days:  %s" % (numberOfDays.get()), font=('Arial', 20))
-    number_of_days_label.pack(pady=(25, 25))
+    style = ttk.Style(payment_page)
+    style.configure("Treeview.Heading",
+                    font=("Arial", 20, 'bold'), padx=150)
+    style.configure("Treeview", font=("Arial", 15), rowheight=20)
 
-    pay_label = Label(
-        payment_page, text="Amount you have to pay \u20B9 %s" % (total_amount), font=('Arial', 20))
-    pay_label.pack(pady=(25, 25))
+    listBox = ttk.Treeview(
+        payment_page, columns=cols, show='headings', height=3)
+
+    for col in cols:
+        listBox.heading(col, text=col, anchor=CENTER)
+    listBox.column("0", width=int(WIDTH/4), anchor=CENTER)
+    listBox.column("1", width=int(WIDTH/4), anchor=CENTER)
+    listBox.column("2", width=int(WIDTH/2), anchor=CENTER)
+    listBox.column("3", width=int(WIDTH/4), anchor=CENTER)
+    listBox.column("4", width=int(WIDTH/4), anchor=CENTER)
+
+    check_in = datetime.now()
+    check_in_date_time = check_in.strftime("%m/%d/%Y %H:%M:%S %p")
+
+    check_out = datetime.now() + timedelta(days=numberOfDays.get())
+    check_out_date_time = check_out.strftime("%m/%d/%Y %H:%M:%S %p")
+
+    listBox.pack(pady=(25, 25))
+
+    value = (numberOfPeople.get(), numberOfDays.get(),
+             total_amount, check_in_date_time, check_out_date_time)
+
+    listBox.insert("", "end", values=(value))
 
     # Submit Button
     payment_submit_button = Button(payment_page, text="Click for Payment", width=15,
@@ -190,13 +214,14 @@ def successful():
 
 
 def click_submit():
+    global roomNum
+
     fName = firstName.get()
     lName = lastName.get()
     phoneNum = phoneNumber.get()
     emailAdd = emailAddress.get()
     numPeople = numberOfPeople.get()
     numDays = numberOfDays.get()
-    roomNum = 0
 
     if roomTypes.get() == 'AC Room':
         room_types = 1
@@ -209,12 +234,13 @@ def click_submit():
                 'numDays) '
                 ' VALUES(%s,%s,%s,%s,%s,%s,%s,%s)',
                 (fName, lName, phoneNum, emailAdd, roomNum, roomTy, numPeople, numDays))
+    orginalDb.commit()
+
     allcur.execute('INSERT INTO orginial_customer_details'
                    '(fName, lName, phoneNum, emailAdd,roomNum, roomTy, numPeople, '
                    'numDays) '
                    ' VALUES(%s,%s,%s,%s,%s,%s,%s,%s)',
                    (fName, lName, phoneNum, emailAdd, roomNum, roomTy, numPeople, numDays))
-    orginalDb.commit()
     copyDb.commit()
 
     first_name_entry.delete(0, 'end')
